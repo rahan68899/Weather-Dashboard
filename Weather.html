@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Weather Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2980b9;
+            --sunny: #f39c12;
+            --cloudy: #7f8c8d;
+            --rainy: #3498db;
+            --stormy: #34495e;
+            --text: #2c3e50;
+            --bg-light: #ecf0f1;
+            --bg-dark: #2c3e50;
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-light), var(--bg-dark));
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            background: linear-gradient(90deg, var(--primary), var(--sunny));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--bg-light);
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 25px;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Canvas and weather display */
+        .weather-display {
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+            height: 500px;
+        }
+
+        #weatherCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB 40%, #B0E0E6 100%);
+        }
+
+        .current-weather {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            color: white;
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+            max-width: 250px;
+        }
+
+        .temp-display {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .weather-desc {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .location {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+        }
+
+        /* Controls and settings */
+        .controls {
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .control-group {
+            background: rgba(236, 240, 241, 0.6);
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-container {
+            margin: 15px 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            background: #e0e0e0;
+            color: var(--text);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .toggle-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            background: white;
+            font-size: 1rem;
+            color: var(--text);
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        .save-load {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .save-load button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .save-btn {
+            background: #27ae60;
+            color: white;
+        }
+
+        .load-btn {
+            background: #e67e22;
+            color: white;
+        }
+
+        .save-load button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Forecast Section */
+        .forecast-container {
+            margin-top: 30px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            padding: 25px;
+        }
+
+        .forecast-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .forecast-graph {
+            width: 100%;
+            height: 250px;
+            position: relative;
+        }
+
+        #forecastCanvas {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 15px;
+        }
+
+        .day-markers {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            margin-top: 10px;
+            background: rgba(236, 240, 241, 0.6);
+            border-radius: 10px;
+        }
+
+        .day-marker {
+            text-align: center;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .dashboard {
+                gap: 15px;
+            }
+            
+            .controls {
+                padding: 15px;
+            }
+            
+            .toggle-btn {
+                min-width: 100px;
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+            
+            .save-load button {
+                padding: 12px;
+                font-size: 0.9rem;
+            }
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px 0;
+            color: var(--bg-light);
+            font-size: 0.9rem;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-cloud-sun"></i> Interactive Weather Dashboard</h1>
+            <p class="subtitle">Real-time weather visualization with interactive controls</p>
+        </header>
+
+        <div class="dashboard">
+            <div class="weather-display">
+                <canvas id="weatherCanvas"></canvas>
+                <div class="current-weather">
+                    <div class="temp-display">24°C</div>
+                    <div class="weather-desc">Partly Cloudy</div>
+                    <div class="location">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>London, UK</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <h2><i class="fas fa-sliders-h"></i> Weather Controls</h2>
+                    
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Temperature: <span id="temp-value">24°C</span></span>
+                        </div>
+                        <input type="range" min="-10" max="40" value="24" class="slider" id="temp-slider">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Humidity: <span id="humidity-value">65%</span></span>
+                        </div>
+                        <input type="range" min="0" max="100" value="65" class="slider" id="humidity-slider">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Wind Speed: <span id="wind-value">12 km/h</span></span>
+                        </div>
+                        <input type="range" min="0" max="100" value="12" class="slider" id="wind-slider">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h2><i class="fas fa-cloud-sun-rain"></i> Weather Conditions</h2>
+                    <div class="toggle-container">
+                        <button class="toggle-btn active" id="sun-toggle"><i class="fas fa-sun"></i> Sunny</button>
+                        <button class="toggle-btn" id="cloud-toggle"><i class="fas fa-cloud"></i> Cloudy</button>
+                        <button class="toggle-btn" id="rain-toggle"><i class="fas fa-cloud-rain"></i> Rain</button>
+                        <button class="toggle-btn" id="storm-toggle"><i class="fas fa-bolt"></i> Storm</button>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h2><i class="fas fa-map-marked-alt"></i> Location</h2>
+                    <select id="location-select">
+                        <option value="london">London, UK</option>
+                        <option value="newyork">New York, USA</option>
+                        <option value="tokyo">Tokyo, Japan</option>
+                        <option value="sydney">Sydney, Australia</option>
+                        <option value="paris">Paris, France</option>
+                        <option value="berlin">Berlin, Germany</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <h2><i class="fas fa-save"></i> Save & Load</h2>
+                    <div class="save-load">
+                        <button class="save-btn" id="save-btn"><i class="fas fa-save"></i> Save Settings</button>
+                        <button class="load-btn" id="load-btn"><i class="fas fa-folder-open"></i> Load Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="forecast-container">
+            <div class="forecast-header">
+                <h2><i class="fas fa-chart-line"></i> 7-Day Forecast</h2>
+            </div>
+            <div class="forecast-graph">
+                <canvas id="forecastCanvas"></canvas>
+            </div>
+            <div class="day-markers">
+                <div class="day-marker">Today</div>
+                <div class="day-marker">Tue</div>
+                <div class="day-marker">Wed</div>
+                <div class="day-marker">Thu</div>
+                <div class="day-marker">Fri</div>
+                <div class="day-marker">Sat</div>
+                <div class="day-marker">Sun</div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Interactive Weather Dashboard | Developed for Educational Purposes | Hosted on GitHub Pages</p>
+        </footer>
+    </div>
+
+    <script>
+        // DOM Elements
+        const weatherCanvas = document.getElementById('weatherCanvas');
+        const forecastCanvas = document.getElementById('forecastCanvas');
+        const tempSlider = document.getElementById('temp-slider');
+        const humiditySlider = document.getElementById('humidity-slider');
+        const windSlider = document.getElementById('wind-slider');
+        const tempValue = document.getElementById('temp-value');
+        const humidityValue = document.getElementById('humidity-value');
+        const windValue = document.getElementById('wind-value');
+        const locationSelect = document.getElementById('location-select');
+        const saveBtn = document.getElementById('save-btn');
+        const loadBtn = document.getElementById('load-btn');
+        const weatherToggles = {
+            sun: document.getElementById('sun-toggle'),
+            cloud: document.getElementById('cloud-toggle'),
+            rain: document.getElementById('rain-toggle'),
+            storm: document.getElementById('storm-toggle')
+        };
+        const tempDisplay = document.querySelector('.temp-display');
+        const weatherDesc = document.querySelector('.weather-desc');
+
+        // Canvas contexts
+        const ctx = weatherCanvas.getContext('2d');
+        const forecastCtx = forecastCanvas.getContext('2d');
+
+        // Set canvas dimensions
+        function resizeCanvases() {
+            weatherCanvas.width = weatherCanvas.offsetWidth;
+            weatherCanvas.height = weatherCanvas.offsetHeight;
+            
+            forecastCanvas.width = forecastCanvas.offsetWidth;
+            forecastCanvas.height = forecastCanvas.offsetHeight;
+            
+            drawWeather();
+            drawForecast();
+        }
+
+        // Weather simulation parameters
+        const weatherState = {
+            temperature: 24,
+            humidity: 65,
+            windSpeed: 12,
+            conditions: {
+                sunny: true,
+                cloudy: false,
+                rain: false,
+                storm: false
+            },
+            location: 'london'
+        };
+
+        // Weather elements
+        const clouds = [];
+        const raindrops = [];
+        const lightnings = [];
+        let sunAngle = 0;
+
+        // Initialize clouds
+        function initWeatherElements() {
+            // Create clouds
+            for (let i = 0; i < 8; i++) {
+                clouds.push({
+                    x: Math.random() * weatherCanvas.width,
+                    y: Math.random() * weatherCanvas.height * 0.4,
+                    width: 80 + Math.random() * 100,
+                    height: 40 + Math.random() * 30,
+                    speed: 0.2 + Math.random() * 0.5,
+                    opacity: 0.7 + Math.random() * 0.3
+                });
+            }
+            
+            // Initialize raindrops
+            for (let i = 0; i < 200; i++) {
+                raindrops.push({
+                    x: Math.random() * weatherCanvas.width,
+                    y: Math.random() * weatherCanvas.height,
+                    length: 5 + Math.random() * 10,
+                    speed: 1 + Math.random() * 5
+                });
+            }
+            
+            // Initialize lightnings
+            for (let i = 0; i < 3; i++) {
+                lightnings.push({
+                    x: Math.random() * weatherCanvas.width,
+                    y: 0,
+                    active: false,
+                    alpha: 0,
+                    segments: []
+                });
+            }
+        }
+
+        // Draw weather scene
+        function drawWeather() {
+            const width = weatherCanvas.width;
+            const height = weatherCanvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Sky gradient based on time and weather
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            
+            if (weatherState.conditions.storm) {
+                gradient.addColorStop(0, '#2c3e50');
+                gradient.addColorStop(0.5, '#34495e');
+                gradient.addColorStop(1, '#2c3e50');
+            } else if (weatherState.conditions.rain) {
+                gradient.addColorStop(0, '#6c7a89');
+                gradient.addColorStop(1, '#95a5a6');
+            } else if (weatherState.conditions.cloudy) {
+                gradient.addColorStop(0, '#7f8c8d');
+                gradient.addColorStop(1, '#bdc3c7');
+            } else {
+                // Sunny gradient changes with time of day
+                const hour = new Date().getHours();
+                if (hour > 6 && hour < 18) {
+                    // Daytime
+                    gradient.addColorStop(0, '#3498db');
+                    gradient.addColorStop(0.5, '#2980b9');
+                    gradient.addColorStop(1, '#1c6ea4');
+                } else {
+                    // Nighttime
+                    gradient.addColorStop(0, '#2c3e50');
+                    gradient.addColorStop(0.5, '#34495e');
+                    gradient.addColorStop(1, '#2c3e50');
+                }
+            }
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            
+            // Draw sun or moon
+            if (!weatherState.conditions.rain && !weatherState.conditions.storm) {
+                const hour = new Date().getHours();
+                const isDay = hour > 6 && hour < 18;
+                
+                sunAngle += 0.002;
+                const sunX = width * 0.8;
+                const sunY = height * 0.25 + Math.sin(sunAngle) * 20;
+                const sunRadius = isDay ? 50 : 40;
+                
+                ctx.beginPath();
+                ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+                
+                if (isDay) {
+                    // Sun with glow effect
+                    const sunGradient = ctx.createRadialGradient(
+                        sunX, sunY, 0, 
+                        sunX, sunY, sunRadius * 1.5
+                    );
+                    sunGradient.addColorStop(0, 'rgba(255, 204, 0, 1)');
+                    sunGradient.addColorStop(1, 'rgba(255, 204, 0, 0)');
+                    
+                    ctx.fillStyle = sunGradient;
+                    ctx.fill();
+                    
+                    // Sun rays
+                    ctx.strokeStyle = 'rgba(255, 204, 0, 0.4)';
+                    ctx.lineWidth = 3;
+                    
+                    for (let i = 0; i < 12; i++) {
+                        const angle = (i * Math.PI / 6) + sunAngle;
+                        const startX = sunX + Math.cos(angle) * sunRadius;
+                        const startY = sunY + Math.sin(angle) * sunRadius;
+                        const endX = sunX + Math.cos(angle) * (sunRadius + 30);
+                        const endY = sunY + Math.sin(angle) * (sunRadius + 30);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(startX, startY);
+                        ctx.lineTo(endX, endY);
+                        ctx.stroke();
+                    }
+                } else {
+                    // Moon with craters
+                    ctx.fillStyle = '#ecf0f1';
+                    ctx.fill();
+                    
+                    // Moon craters
+                    ctx.fillStyle = '#bdc3c7';
+                    ctx.beginPath();
+                    ctx.arc(sunX - 15, sunY - 10, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(sunX + 10, sunY + 15, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(sunX + 15, sunY - 5, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            // Draw clouds
+            clouds.forEach(cloud => {
+                // Move cloud
+                cloud.x += cloud.speed;
+                if (cloud.x > width + cloud.width) {
+                    cloud.x = -cloud.width;
+                    cloud.y = Math.random() * height * 0.4;
+                }
+                
+                // Draw cloud
+                ctx.globalAlpha = weatherState.conditions.storm ? cloud.opacity * 0.8 : 
+                                weatherState.conditions.rain ? cloud.opacity * 0.9 : cloud.opacity;
+                ctx.fillStyle = weatherState.conditions.storm ? '#2c3e50' : '#ecf0f1';
+                
+                // Draw cloud with multiple circles
+                ctx.beginPath();
+                ctx.arc(cloud.x + cloud.width * 0.3, cloud.y + cloud.height * 0.3, cloud.height * 0.5, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.width * 0.5, cloud.y + cloud.height * 0.2, cloud.height * 0.6, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.width * 0.7, cloud.y + cloud.height * 0.3, cloud.height * 0.5, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.width * 0.4, cloud.y + cloud.height * 0.6, cloud.height * 0.5, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.width * 0.6, cloud.y + cloud.height * 0.6, cloud.height * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            ctx.globalAlpha = 1;
+            
+            // Draw rain
+            if (weatherState.conditions.rain || weatherState.conditions.storm) {
+                raindrops.forEach(drop => {
+                    // Move raindrop
+                    drop.y += drop.speed * 2;
+                    drop.x -= weatherState.windSpeed / 10;
+                    
+                    // Reset if off screen
+                    if (drop.y > height || drop.x < 0) {
+                        drop.y = Math.random() * -100;
+                        drop.x = Math.random() * width;
+                    }
+                    
+                    // Draw raindrop
+                    ctx.strokeStyle = weatherState.conditions.storm ? '#ecf0f1' : '#3498db';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(drop.x, drop.y);
+                    ctx.lineTo(drop.x - weatherState.windSpeed / 3, drop.y + drop.length);
+                    ctx.stroke();
+                });
+            }
+            
+            // Draw lightning
+            if (weatherState.conditions.storm) {
+                lightnings.forEach(lightning => {
+                    if (!lightning.active && Math.random() < 0.005) {
+                        lightning.active = true;
+                        lightning.alpha = 1;
+                        lightning.x = Math.random() * width * 0.8 + width * 0.1;
+                        lightning.y = 0;
+                        
+                        // Generate lightning path
+                        lightning.segments = [];
+                        const segments = 5 + Math.floor(Math.random() * 8);
+                        let currentX = lightning.x;
+                        let currentY = 0;
+                        
+                        for (let i = 0; i < segments; i++) {
+                            const segment = {
+                                x: currentX,
+                                y: currentY
+                            };
+                            
+                            currentX += (Math.random() - 0.5) * 50;
+                            currentY += Math.random() * 50 + 30;
+                            
+                            segment.toX = currentX;
+                            segment.toY = currentY;
+                            
+                            lightning.segments.push(segment);
+                        }
+                    }
+                    
+                    if (lightning.active) {
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${lightning.alpha})`;
+                        ctx.lineWidth = 2;
+                        ctx.lineCap = 'round';
+                        
+                        lightning.segments.forEach(segment => {
+                            ctx.beginPath();
+                            ctx.moveTo(segment.x, segment.y);
+                            ctx.lineTo(segment.toX, segment.toY);
+                            ctx.stroke();
+                        });
+                        
+                        lightning.alpha -= 0.03;
+                        if (lightning.alpha <= 0) {
+                            lightning.active = false;
+                        }
+                    }
+                });
+            }
+            
+            // Draw ground
+            ctx.fillStyle = weatherState.conditions.rain ? '#3d5e3d' : 
+                            weatherState.conditions.storm ? '#2a3a2a' : '#27ae60';
+            ctx.fillRect(0, height * 0.8, width, height * 0.2);
+            
+            // Draw some ground details
+            ctx.fillStyle = weatherState.conditions.rain ? '#345634' : 
+                            weatherState.conditions.storm ? '#1e2a1e' : '#219653';
+            for (let i = 0; i < 20; i++) {
+                const x = Math.random() * width;
+                const size = 5 + Math.random() * 15;
+                ctx.beginPath();
+                ctx.arc(x, height * 0.8, size, 0, Math.PI, true);
+                ctx.fill();
+            }
+            
+            // Draw wind effect
+            if (weatherState.windSpeed > 20) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 10]);
+                
+                for (let i = 0; i < 5; i++) {
+                    const y = height * 0.6 + i * 30;
+                    ctx.beginPath();
+                    ctx.moveTo(-50, y);
+                    for (let x = 0; x < width; x += 50) {
+                        const offset = Math.sin((x / 50) + Date.now() / 1000) * 10;
+                        ctx.lineTo(x, y + offset);
+                    }
+                    ctx.stroke();
+                }
+                
+                ctx.setLineDash([]);
+            }
+        }
+
+        // Draw forecast graph
+        function drawForecast() {
+            const width = forecastCanvas.width;
+            const height = forecastCanvas.height;
+            const padding = 40;
+            
+            // Clear canvas
+            forecastCtx.clearRect(0, 0, width, height);
+            
+            // Background
+            forecastCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            forecastCtx.fillRect(0, 0, width, height);
+            
+            // Grid lines
+            forecastCtx.strokeStyle = '#ecf0f1';
+            forecastCtx.lineWidth = 1;
+            
+            // Horizontal grid lines
+            const gridLines = 5;
+            for (let i = 0; i <= gridLines; i++) {
+                const y = padding + (i * (height - padding * 2) / gridLines);
+                forecastCtx.beginPath();
+                forecastCtx.moveTo(padding, y);
+                forecastCtx.lineTo(width - padding, y);
+                forecastCtx.stroke();
+                
+                // Temperature labels
+                const temp = weatherState.temperature + (gridLines/2 - i) * 5;
+                forecastCtx.fillStyle = '#7f8c8d';
+                forecastCtx.textAlign = 'right';
+                forecastCtx.textBaseline = 'middle';
+                forecastCtx.fillText(`${temp}°C`, padding - 5, y);
+            }
+            
+            // Generate forecast data
+            const forecastData = [];
+            for (let i = 0; i < 7; i++) {
+                forecastData.push({
+                    temp: weatherState.temperature + (Math.random() - 0.5) * 8,
+                    rain: Math.random() > 0.7,
+                    cloud: Math.random() > 0.5
+                });
+            }
+            
+            // Plot temperatures
+            forecastCtx.strokeStyle = '#e74c3c';
+            forecastCtx.lineWidth = 3;
+            forecastCtx.beginPath();
+            
+            forecastData.forEach((data, i) => {
+                const x = padding + i * ((width - padding * 2) / 6);
+                const y = padding + ((Math.max(0, Math.min(40, 40 - data.temp)) / 40) * (height - padding * 2);
+                
+                if (i === 0) {
+                    forecastCtx.moveTo(x, y);
+                } else {
+                    forecastCtx.lineTo(x, y);
+                }
+                
+                // Draw point
+                forecastCtx.fillStyle = '#e74c3c';
+                forecastCtx.beginPath();
+                forecastCtx.arc(x, y, 6, 0, Math.PI * 2);
+                forecastCtx.fill();
+                
+                // Draw weather icon
+                const iconSize = 20;
+                const iconY = y - 30;
+                
+                if (data.rain) {
+                    forecastCtx.fillStyle = '#3498db';
+                    for (let j = 0; j < 3; j++) {
+                        forecastCtx.beginPath();
+                        forecastCtx.moveTo(x - iconSize/2 + j * 5, iconY);
+                        forecastCtx.lineTo(x - iconSize/2 + j * 5 - 2, iconY + 8);
+                        forecastCtx.stroke();
+                    }
+                } else if (data.cloud) {
+                    forecastCtx.fillStyle = '#7f8c8d';
+                    forecastCtx.beginPath();
+                    forecastCtx.arc(x, iconY, iconSize/2, 0, Math.PI * 2);
+                    forecastCtx.arc(x - iconSize/2, iconY, iconSize/3, 0, Math.PI * 2);
+                    forecastCtx.arc(x + iconSize/2, iconY, iconSize/3, 0, Math.PI * 2);
+                    forecastCtx.fill();
+                } else {
+                    forecastCtx.fillStyle = '#f39c12';
+                    forecastCtx.beginPath();
+                    forecastCtx.arc(x, iconY, iconSize/2, 0, Math.PI * 2);
+                    forecastCtx.fill();
+                }
+            });
+            
+            forecastCtx.stroke();
+            
+            // Draw axis labels
+            forecastCtx.fillStyle = '#2c3e50';
+            forecastCtx.textAlign = 'center';
+            forecastCtx.textBaseline = 'top';
+            forecastCtx.font = '14px Arial';
+            forecastCtx.fillText('Temperature Forecast', width / 2, 10);
+        }
+
+        // Update weather description
+        function updateWeatherDesc() {
+            let desc = '';
+            if (weatherState.conditions.storm) {
+                desc = 'Thunderstorm';
+            } else if (weatherState.conditions.rain) {
+                desc = 'Rainy';
+            } else if (weatherState.conditions.cloudy) {
+                desc = weatherState.conditions.sunny ? 'Partly Cloudy' : 'Cloudy';
+            } else {
+                desc = 'Sunny';
+            }
+            
+            weatherDesc.textContent = desc;
+            tempDisplay.textContent = `${weatherState.temperature}°C`;
+        }
+
+        // Initialize event listeners
+        function initEventListeners() {
+            // Temperature slider
+            tempSlider.addEventListener('input', () => {
+                weatherState.temperature = parseInt(tempSlider.value);
+                tempValue.textContent = `${weatherState.temperature}°C`;
+                updateWeatherDesc();
+            });
+            
+            // Humidity slider
+            humiditySlider.addEventListener('input', () => {
+                weatherState.humidity = parseInt(humiditySlider.value);
+                humidityValue.textContent = `${weatherState.humidity}%`;
+                
+                // Increase chance of rain at high humidity
+                if (weatherState.humidity > 80 && Math.random() > 0.7) {
+                    weatherState.conditions.rain = true;
+                    weatherState.conditions.sunny = false;
+                    weatherState.conditions.storm = false;
+                    updateToggleButtons();
+                }
+            });
+            
+            // Wind slider
+            windSlider.addEventListener('input', () => {
+                weatherState.windSpeed = parseInt(windSlider.value);
+                windValue.textContent = `${weatherState.windSpeed} km/h`;
+                
+                // Increase chance of storm at high wind speed
+                if (weatherState.windSpeed > 40 && Math.random() > 0.8) {
+                    weatherState.conditions.storm = true;
+                    weatherState.conditions.rain = true;
+                    updateToggleButtons();
+                }
+            });
+            
+            // Weather condition toggles
+            weatherToggles.sun.addEventListener('click', () => {
+                weatherState.conditions.sunny = !weatherState.conditions.sunny;
+                weatherState.conditions.cloudy = false;
+                weatherState.conditions.rain = false;
+                weatherState.conditions.storm = false;
+                updateToggleButtons();
+            });
+            
+            weatherToggles.cloud.addEventListener('click', () => {
+                weatherState.conditions.cloudy = !weatherState.conditions.cloudy;
+                weatherState.conditions.rain = false;
+                weatherState.conditions.storm = false;
+                updateToggleButtons();
+            });
+            
+            weatherToggles.rain.addEventListener('click', () => {
+                weatherState.conditions.rain = !weatherState.conditions.rain;
+                weatherState.conditions.storm = false;
+                updateToggleButtons();
+                
+                // Increase humidity when raining
+                if (weatherState.conditions.rain && weatherState.humidity < 70) {
+                    weatherState.humidity = 70 + Math.floor(Math.random() * 20);
+                    humiditySlider.value = weatherState.humidity;
+                    humidityValue.textContent = `${weatherState.humidity}%`;
+                }
+            });
+            
+            weatherToggles.storm.addEventListener('click', () => {
+                weatherState.conditions.storm = !weatherState.conditions.storm;
+                weatherState.conditions.rain = weatherState.conditions.storm;
+                updateToggleButtons();
+                
+                if (weatherState.conditions.storm) {
+                    // Set storm conditions
+                    weatherState.humidity = 85 + Math.floor(Math.random() * 10);
+                    weatherState.windSpeed = 45 + Math.floor(Math.random() * 30);
+                    
+                    humiditySlider.value = weatherState.humidity;
+                    humidityValue.textContent = `${weatherState.humidity}%`;
+                    
+                    windSlider.value = weatherState.windSpeed;
+                    windValue.textContent = `${weatherState.windSpeed} km/h`;
+                }
+            });
+            
+            // Location selector
+            locationSelect.addEventListener('change', () => {
+                weatherState.location = locationSelect.value;
+                
+                // Simulate location-based weather
+                const locations = {
+                    london: { temp: 18, humidity: 75 },
+                    newyork: { temp: 22, humidity: 65 },
+                    tokyo: { temp: 25, humidity: 70 },
+                    sydney: { temp: 28, humidity: 60 },
+                    paris: { temp: 20, humidity: 70 },
+                    berlin: { temp: 19, humidity: 68 }
+                };
+                
+                const loc = locations[weatherState.location];
+                if (loc) {
+                    weatherState.temperature = loc.temp;
+                    weatherState.humidity = loc.humidity;
+                    
+                    tempSlider.value = weatherState.temperature;
+                    humiditySlider.value = weatherState.humidity;
+                    
+                    tempValue.textContent = `${weatherState.temperature}°C`;
+                    humidityValue.textContent = `${weatherState.humidity}%`;
+                    
+                    updateWeatherDesc();
+                }
+            });
+            
+            // Save and load buttons
+            saveBtn.addEventListener('click', () => {
+                localStorage.setItem('weatherDashboardSettings', JSON.stringify(weatherState));
+                alert('Settings saved successfully!');
+            });
+            
+            loadBtn.addEventListener('click', () => {
+                const savedSettings = localStorage.getItem('weatherDashboardSettings');
+                if (savedSettings) {
+                    Object.assign(weatherState, JSON.parse(savedSettings));
+                    
+                    // Update UI elements
+                    tempSlider.value = weatherState.temperature;
+                    humiditySlider.value = weatherState.humidity;
+                    windSlider.value = weatherState.windSpeed;
+                    locationSelect.value = weatherState.location;
+                    
+                    tempValue.textContent = `${weatherState.temperature}°C`;
+                    humidityValue.textContent = `${weatherState.humidity}%`;
+                    windValue.textContent = `${weatherState.windSpeed} km/h`;
+                    
+                    updateToggleButtons();
+                    updateWeatherDesc();
+                    
+                    alert('Settings loaded successfully!');
+                } else {
+                    alert('No saved settings found!');
+                }
+            });
+            
+            // Window resize
+            window.addEventListener('resize', resizeCanvases);
+        }
+
+        // Update toggle button states
+        function updateToggleButtons() {
+            weatherToggles.sun.classList.toggle('active', weatherState.conditions.sunny);
+            weatherToggles.cloud.classList.toggle('active', weatherState.conditions.cloudy);
+            weatherToggles.rain.classList.toggle('active', weatherState.conditions.rain);
+            weatherToggles.storm.classList.toggle('active', weatherState.conditions.storm);
+            updateWeatherDesc();
+        }
+
+        // Animation loop
+        function animate() {
+            drawWeather();
+            requestAnimationFrame(animate);
+        }
+
+        // Initialize application
+        function init() {
+            resizeCanvases();
+            initWeatherElements();
+            initEventListeners();
+            updateToggleButtons();
+            animate();
+            
+            // Draw forecast initially
+            drawForecast();
+            
+            // Update forecast periodically
+            setInterval(drawForecast, 30000);
+        }
+
+        // Start the application
+        window.onload = init;
+    </script>
+</body>
+</html>
